@@ -1,23 +1,279 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>每日签到 - PMP签到助手</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.card { text-align: center; padding: 60px 40px; max-width: 500px; }
-.card h1 { font-size: 28px; margin-bottom: 16px; color: #3fb950; }
-.card p { font-size: 16px; color: #8b949e; margin-bottom: 24px; }
-.badge { display: inline-block; background: rgba(63,185,80,.15); color: #3fb950; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
+:root,[data-theme="dark"]{--bg:#0d1117;--bg2:#161b22;--surface:#1c2333;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--text3:#484f58;--accent:#3fb950;--accent2:#238636;--accent3:#1f6feb}
+[data-theme="light"]{--bg:#f6f8fa;--bg2:#ffffff;--surface:#ffffff;--border:#d0d7de;--text:#1f2328;--text2:#656d76;--text3:#afb8c1;--accent:#1a7f37;--accent2:#2da44e;--accent3:#0969da}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:18px;display:flex;align-items:center;gap:8px}
+.header h1 span{font-size:24px}
+.container{max-width:800px;margin:0 auto;padding:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-card .stat-value{font-size:24px;font-weight:700;color:var(--accent)}
+.stat-card .stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+.signin-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;text-align:center}
+.signin-btn{background:var(--accent2);color:#fff;border:none;padding:14px 40px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s}
+.signin-btn:hover{background:var(--accent);transform:translateY(-1px)}
+.signin-btn:disabled{opacity:.5;cursor:not-allowed}
+.signin-status{margin-top:12px;font-size:14px;color:var(--text2)}
+.signin-status.success{color:var(--accent)}
+.signin-status.error{color:#f85149}
+.signin-status.already{color:#d29922}
+.history-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.history-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.history-header h2{font-size:16px}
+.month-nav{display:flex;gap:8px;align-items:center}
+.month-nav button{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+.month-nav span{font-size:14px;min-width:100px;text-align:center}
+.record-list{max-height:500px;overflow-y:auto}
+.record-item{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:12px}
+.record-item:last-child{border-bottom:none}
+.record-date{font-size:13px;color:var(--text2);min-width:80px}
+.record-icon{font-size:20px}
+.record-detail{flex:1}
+.record-detail .record-day{font-size:14px;font-weight:500}
+.record-detail .record-reward{font-size:12px;color:var(--accent);margin-top:2px}
+.record-streak{font-size:12px;color:var(--text3);background:var(--bg2);padding:4px 8px;border-radius:4px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text2)}
+.empty-state .empty-icon{font-size:48px;margin-bottom:12px}
+.footer{text-align:center;padding:20px;font-size:12px;color:var(--text3)}
+.loading{text-align:center;padding:20px;color:var(--text2)}
 </style>
 </head>
 <body>
-<div class="card">
-<h1>✅ 每日签到</h1>
-<p>PMP平台每日自动签到任务，每天早上9点自动执行，记录签到结果与收益（+$20/天）。</p>
-<span class="badge">开发中</span>
+<div class="header">
+  <h1><span>✅</span> 每日签到</h1>
+  <div style="display:flex;gap:8px">
+    <button onclick="toggleTheme()" style="background:none;border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px" id="themeBtn">🌙 暗黑</button>
+  </div>
 </div>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat-card"><div class="stat-value" id="totalDays">0</div><div class="stat-label">累计签到天数</div></div>
+    <div class="stat-card"><div class="stat-value" id="currentStreak">0</div><div class="stat-label">当前连续签到</div></div>
+    <div class="stat-card"><div class="stat-value" id="maxStreak">0</div><div class="stat-label">最长连续签到</div></div>
+    <div class="stat-card"><div class="stat-value" id="totalReward">¥0</div><div class="stat-label">累计收益</div></div>
+  </div>
+
+  <div class="signin-section">
+    <button class="signin-btn" id="signinBtn" onclick="doSignin()">📅 今日签到</button>
+    <div class="signin-status" id="signinStatus"></div>
+  </div>
+
+  <div class="history-section">
+    <div class="history-header">
+      <h2>📋 签到记录</h2>
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">◀</button>
+        <span id="monthLabel"></span>
+        <button onclick="changeMonth(1)">▶</button>
+      </div>
+    </div>
+    <div class="record-list" id="recordList"><div class="loading">加载中...</div></div>
+  </div>
+
+  <div class="footer">PMP每日签到 · 每天签到奖励 ¥20</div>
+</div>
+
+<script>
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:9877' : 'https://songhonglu.github.io/projects-backend';
+const portalToken = sessionStorage.getItem('portal_token') || localStorage.getItem('portal_token') || '';
+let records = [];
+let cy, cm;
+
+(async function init() {
+  const n = new Date();
+  cy = n.getFullYear();
+  cm = n.getMonth();
+  updateLabel();
+  await loadHistory();
+  await checkToday();
+})();
+
+async function apiCall(path, method, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (portalToken) opts.headers['Authorization'] = 'Bearer ' + portalToken;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API_BASE + path, opts);
+  return res.json();
+}
+
+async function checkToday() {
+  const btn = document.getElementById('signinBtn');
+  const status = document.getElementById('signinStatus');
+  try {
+    const data = await apiCall('/api/signin/check', 'POST', {});
+    if (data.alreadySignedIn) {
+      btn.disabled = true;
+      btn.textContent = '✅ 已签到';
+      status.className = 'signin-status already';
+      status.textContent = '今日已签到，奖励 ¥20，明天再来吧！';
+    } else {
+      btn.disabled = false;
+      btn.textContent = '📅 今日签到';
+      status.className = 'signin-status';
+      status.textContent = '';
+    }
+  } catch (e) {
+    status.className = 'signin-status error';
+    status.textContent = '连接服务器失败，请检查后端是否运行';
+  }
+}
+
+async function doSignin() {
+  const btn = document.getElementById('signinBtn');
+  const status = document.getElementById('signinStatus');
+  btn.disabled = true;
+  btn.textContent = '签到中...';
+  try {
+    const data = await apiCall('/api/signin/do', 'POST', {});
+    if (data.success) {
+      status.className = 'signin-status success';
+      status.textContent = '签到成功！获得 ¥20';
+      btn.textContent = '✅ 已签到';
+      await loadHistory();
+      updateStats();
+    } else {
+      status.className = 'signin-status error';
+      status.textContent = data.error || '签到失败';
+      btn.disabled = false;
+      btn.textContent = '📅 今日签到';
+    }
+  } catch (e) {
+    status.className = 'signin-status error';
+    status.textContent = '连接服务器失败，请检查后端是否运行';
+    btn.disabled = false;
+    btn.textContent = '📅 今日签到';
+  }
+}
+
+async function loadHistory() {
+  try {
+    const data = await apiCall('/api/signin/history', 'GET');
+    records = data.records || [];
+    renderRecords();
+    updateStats();
+  } catch (e) {
+    document.getElementById('recordList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>加载失败，请检查后端服务</p></div>';
+  }
+}
+
+function updateStats() {
+  const total = records.length;
+  const reward = total * 20;
+  document.getElementById('totalDays').textContent = total;
+  document.getElementById('totalReward').textContent = '¥' + reward;
+  
+  // Calculate streaks
+  if (total === 0) {
+    document.getElementById('currentStreak').textContent = 0;
+    document.getElementById('maxStreak').textContent = 0;
+    return;
+  }
+  
+  const dates = records.map(r => r.date).sort();
+  const dateSet = new Set(dates);
+  
+  // Current streak (from today going backward)
+  let curStreak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    if (dateSet.has(key)) curStreak++;
+    else break;
+  }
+  
+  // Max streak
+  let maxStreak = 0, run = 0;
+  const sortedDates = dates.sort();
+  for (let i = 0; i < sortedDates.length; i++) {
+    run++;
+    if (i < sortedDates.length - 1) {
+      const curr = new Date(sortedDates[i]);
+      const next = new Date(sortedDates[i+1]);
+      const diff = (next - curr) / (1000*60*60*24);
+      if (diff !== 1) run = 0;
+    }
+    if (run > maxStreak) maxStreak = run;
+  }
+  
+  document.getElementById('currentStreak').textContent = curStreak;
+  document.getElementById('maxStreak').textContent = maxStreak;
+}
+
+function changeMonth(d) {
+  cm += d;
+  if (cm < 0) { cm = 11; cy--; }
+  if (cm > 11) { cm = 0; cy++; }
+  updateLabel();
+  renderRecords();
+}
+
+function updateLabel() {
+  document.getElementById('monthLabel').textContent = cy + '年' + (cm+1) + '月';
+}
+
+function renderRecords() {
+  const c = document.getElementById('recordList');
+  const monthRecs = records.filter(r => {
+    const [y, m] = r.date.split('-').map(Number);
+    return y === cy && m === cm + 1;
+  }).sort((a, b) => b.date.localeCompare(a.date));
+  
+  if (!monthRecs.length) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>本月暂无签到记录</p><p style="margin-top:8px;font-size:13px">坚持每天签到，积累你的学习收益！</p></div>';
+    return;
+  }
+  
+  c.innerHTML = monthRecs.map(r => {
+    const [y, m, d] = r.date.split('-');
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y, m-1, d).getDay()];
+    const streak = calcStreak(r.date);
+    return '<div class="record-item">' +
+      '<div class="record-date">'+m+'/'+d+'</div>' +
+      '<div class="record-icon">✅</div>' +
+      '<div class="record-detail">' +
+        '<div class="record-day">'+r.date+' ('+dow+')</div>' +
+        '<div class="record-reward">+¥'+r.reward+' · '+r.time+'</div>' +
+      '</div>' +
+      '<div class="record-streak">🔥 连续'+streak+'天</div>' +
+    '</div>';
+  }).join('');
+}
+
+function calcStreak(dateStr) {
+  const dateSet = new Set(records.map(r => r.date));
+  let st = 1;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  let c = new Date(y, m-1, d);
+  for (let i = 1; i < 365; i++) {
+    c.setDate(c.getDate() - 1);
+    const key = c.getFullYear() + '-' + String(c.getMonth()+1).padStart(2,'0') + '-' + String(c.getDate()).padStart(2,'0');
+    if (dateSet.has(key)) st++;
+    else break;
+  }
+  return st;
+}
+
+function toggleTheme() {
+  const h = document.documentElement, b = document.getElementById('themeBtn');
+  if (h.getAttribute('data-theme') === 'dark') {
+    h.setAttribute('data-theme', 'light');
+    b.textContent = '☀️ 亮白';
+  } else {
+    h.setAttribute('data-theme', 'dark');
+    b.textContent = '🌙 暗黑';
+  }
+}
+</script>
 </body>
 </html>
